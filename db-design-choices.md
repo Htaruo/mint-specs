@@ -346,3 +346,25 @@ CREATE INDEX IF NOT EXISTS idx_note_workspace ON note (workspace_uuid);
   **fresh installs and upgrades alike**, and test the upgrade path with real data.
 - **When a new change column is added, backfill it from `created_at`,** so existing rows read as
   clean instead of being pushed all over again.
+
+## 10. Schema and migration versioning
+
+Schema snapshots and forward migrations use different SemVer bump rules:
+
+| Change | Version example | Rule |
+|---|---|---|
+| Forward migration, table alteration, backfill, or index-only change | `v1.0.0` -> `v1.0.1` -> `v1.0.2` | Increment the patch component for every applied forward migration. |
+| Full snapshot exported from Supabase or a local database | `v1.0.0` -> `v1.1.0` -> `v1.2.0` | Increment the minor component for every full-schema snapshot. |
+| Breaking schema reset or new major cycle | `v1.0.0` -> `v2.0.0` | Increment the major component only for an approved breaking product or database cycle. |
+
+- **A forward migration must never rewrite an existing migration file.** Add the next patch
+  migration and keep it idempotent where the database supports it.
+- **A snapshot is a complete, readable export, not a migration.** It may be used to rebuild or
+  inspect a database, but it must not replace the ordered forward-migration chain.
+- **Snapshot from Supabase after approved migrations.** The snapshot minor version identifies
+  the exported schema version, not the number of migrations or a release date.
+- **Server indexing and sync identity remain separate.** Server `id bigint` columns are never
+  sent to clients or used as cross-database foreign keys. Local and server relationships use
+  `*_uuid` columns as documented in §3.
+- **Version and table names must be spot-checked together.** The snapshot filename, migration
+  filename, schema comments, and release notes must describe the same database state.
